@@ -5,6 +5,11 @@
 - Samtidighet per flyplass per time i perioden 01.10.25-31.10.25
 
 ## Loggføring
+- Understand the data
+- Build a baseline
+- Build the first ML model
+- Validate and compare 
+- Package report
 
 1. Begreper
 - airport_group, date, hour skal være unike i både trening og predikasjonsmodellene.
@@ -26,7 +31,7 @@ Den mangler i interference fordi det er data som vi får for å kunne predikere 
 - Det er det vi skal levere inn. Den fungerer som en mal av nøykatig kombinasjoner av kolonnene. Samt fyller inn kolonnen pred i denne malen.
 
 
-### Lage baseline
+### 2. Lage baseline
 - En baseline er et enkelt, logisk system som du kan lage predikasjoner uten maskinlæring.
 - Den forteller om det er et signal i dataen, som for eksempel faste mønstre per time/dag, eller om du kan forbedre resultatene med mer avanserte metoder.
 
@@ -65,7 +70,67 @@ Mentalt bilde:
     - svar: en for å trene rater fra hisotrikk og en for å slå opp rater med fallback-logiken.
 
 
+## 3. Lage maskinlæringsmodellen
+Nå som preds baseline modellen er laget så skal jeg lage en feature plan og trenings og validerings plan. Vi skal lage en plan slik at maskinlæringsmodellen til å predikere målet bedre enn baslinenen.
 
+### No cheating! No data leakage. 
+
+- Jeg skal starte med logistikk regresjon. 
+    - Etter det starte med tree-based models som HistGradingBoosting, LightGBM eller XGBoost for ikke-linære mønstre.
+
+- Bruke samme split logikk som for baseline.
+
+- Lage en feature list:
+Feature name: Description: Why it's safe:
+
+Hour: Timen av dagen - Komemr fra timestamp uten å lekke. 
+
+Dow: Day of the week. - Fra data, no leakage
+
+is_weekend: 1 hvis lørdag elelr søndag - fra dow
+
+feat_sched_flights_cnt: Planned number of flights- Comes from schedule, not target
+
+feat_sched_concurrence:	Planned concurrency level - Also from schedule
+
+feat_sched_flights_cnt_lag1: 	Previous hour’s planned flights (within same group) - Uses only past values
+
+feat_sched_concurrence_lag1: Previous hour’s planned concurrency - Same reason
+
+rate_group_hour: Average target for that group+hour (from baseline table) - Computed from older data only
+
+rate_group_dow_hour: Average target for that group+dow+hour (from baseline table) - Same
+
+
+Data preparation:
+- pd.to_datetime må alltid være hour er integer.
+- Sortere airport_group, date og hour før lage lag features.
+- Fill na
+
+Train and validate:
+- Train LR on training set
+
+- Evaluate on validation set → record AUC and Brier
+
+- Train HGB on training set
+
+- Evaluate on validation set → record AUC and Brier
+
+Calibrate the tree model
+
+- Calibration just makes the probabilities more realistic.
+
+Inference (Future prediction)
+Når du har testet nok og stoler på modellen: 
+- Lage samme features for inference_data_oct2025.csv.
+
+- Predikere med den endelige modelen. 
+
+- Clip to [0,1], round to 3 decimals.
+
+- Merge into preds_mal.csv → pred column.
+
+- Save as your final submission.
 
 
 ### Rapport
